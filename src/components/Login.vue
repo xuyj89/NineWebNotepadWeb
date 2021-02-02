@@ -47,7 +47,7 @@
   </el-dialog>
 
   <div class="login_border">
-    <h1 class="login_title">9号Web记事本</h1>
+    <h1 class="login_title">Web记事本</h1>
     <hr/>
     <div>
       <el-row type="flex" align="middle" class="password_border">
@@ -60,7 +60,7 @@
     <div class="button_border"></div>
     <el-row :gutter="20">
       <el-col :span="12">
-        <el-button type="success" class="btn_login">登录</el-button>
+        <el-button type="success" class="btn_login" v-on:click="loginClicked">登录</el-button>
       </el-col>
       <el-col :span="12">
         <el-button type="warning" class="btn_set_password" v-on:click="setPassword">设置/修改密码</el-button>
@@ -100,7 +100,7 @@
 <script>
 import {ElMessage} from 'element-plus'
 import NetUtils from "../utils/netUtils";
-import 'js-md5'
+import md5 from 'js-md5'
 
 export default {
   name: "Login",
@@ -131,9 +131,20 @@ export default {
       let passwordMd5 = md5(this.registerPassword);
       NetUtils.post(this, "/user/register?password=" + passwordMd5, (result) => {
         if (result.code == 0) {
-          let token = result.data;
           this.dialogRegisterVisible = false;
-          ElMessage("注册成功，即将进入系统主页");
+          ElMessage("注册成功，请登录");
+        } else {
+          ElMessage(result.error);
+        }
+      });
+    },
+    loginClicked(){
+      let passwordMd5 = md5(this.password);
+      NetUtils.post(this, "/user/login?password=" + passwordMd5, (result) => {
+        if (result.code == 0) {
+          let token = result.data;
+          localStorage.setItem('token',token);
+          this.$router.push('/mainPage')
         } else {
           ElMessage(result.error);
         }
