@@ -6,7 +6,7 @@
         <el-button type="success" v-on:click="addBookClick" size="mini" round>新增</el-button>
       </div>
       <div>
-        <div class="book_item" v-for="book in bookList" v-on:click="listTitle(book.id)">{{ book.name }}</div>
+        <div class="book_item" v-for="book in bookList" v-on:click="bookClick(book.id)">{{ book.name }}</div>
       </div>
     </div>
     <div class="title_container">
@@ -14,10 +14,11 @@
         <el-button v-if="currentBookId!=''" type="success" v-on:click="addTitleClick" size="mini" round>新增</el-button>
       </div>
       <div>
-        <div class="title_item" v-for="title in titleList">{{ title.name }}</div>
+        <div class="title_item" v-for="title in titleList" v-on:click="titleClick(title.id)">{{ title.name }}</div>
       </div>
     </div>
     <div class="document_container">
+      <div><el-button v-if="currentTitleId!=''" type="success" v-on:click="saveDocument" size="mini" round>保存</el-button></div>
       <div id="content_editor">
 
       </div>
@@ -113,9 +114,10 @@ export default {
   mounted() {
     this.token = localStorage.getItem("token");
 
-    const editor = new E('#content_editor')
-    editor.config.height = 800
-    editor.create()
+    this.editor.config.height = 800;
+    this.editor.config.zIndex = 50;
+    this.editor.config.uploadImgShowBase64 = true
+    this.editor.create();
 
 
     this.listBook();
@@ -125,7 +127,9 @@ export default {
       token: "",
       bookList: [],
       currentBookId:"",
+      currentTitleId:"",
       titleList:[],
+      editor:new E('#content_editor'),
     };
   },
   methods: {
@@ -138,8 +142,22 @@ export default {
         }
       });
     },
-    listTitle(bookId){
+    bookClick(bookId){
       this.currentBookId = bookId;
+      this.listTitle()
+    },
+    titleClick(titleId){
+      this.currentTitleId = titleId;
+      NetUtils.get(this, "/document/get?token=" + this.token+"&noteBookId="+this.currentBookId+"&titleId="+this.currentTitleId, (result) => {
+        if (result.code == 0) {
+          const document = result.data;
+          this.editor.txt.html(document.text);
+        } else {
+          ElMessage(result.error);
+        }
+      });
+    },
+    listTitle(){
       NetUtils.get(this, "/title/list?token=" + this.token+"&noteBookId="+this.currentBookId, (result) => {
         if (result.code == 0) {
           this.titleList = result.data;
@@ -174,14 +192,29 @@ export default {
           noteBookId:this.currentBookId,
           name: value
         }
-        NetUtils.post(this, "/title/set?token=" + this.token+"&noteBookId="+this.currentBookId, (result) => {
+        NetUtils.post(this, "/title/set?token=" + this.token, (result) => {
           if (result.code == 0) {
-            this.listTitle(this.currentBookId)
+            this.listTitle()
           } else {
             ElMessage(result.error);
           }
         }, title);
       });
+    },
+    saveDocument(){
+      let documentText = this.editor.txt.html();
+      let document = {
+        noteBookId:this.currentBookId,
+        titleId:this.currentTitleId,
+        text: documentText
+      }
+      NetUtils.post(this, "/document/set?token=" + this.token, (result) => {
+        if (result.code == 0) {
+          ElMessage("保存成功");
+        } else {
+          ElMessage(result.error);
+        }
+      }, document);
     }
   }
 };
