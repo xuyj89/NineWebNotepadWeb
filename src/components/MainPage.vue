@@ -18,8 +18,11 @@
       </div>
     </div>
     <div class="document_container">
-      <div><el-button v-if="currentTitleId!=''" type="success" v-on:click="saveDocument" size="mini" round>保存</el-button></div>
-      <div id="content_editor">
+      <div class="document_buttons"><el-button v-if="currentTitleId!=''" type="success" v-on:click="saveDocument" size="mini" round>{{isEdit?"保存":"编辑"}}</el-button></div>
+      <hr/>
+      <div class="document_show" v-if="!isEdit" v-html="contentHtml">
+      </div>
+      <div v-show="isEdit" id="content_editor">
 
       </div>
     </div>
@@ -60,9 +63,8 @@
 }
 
 .document_container {
-  padding-top: 60px;
-  padding-left: 610px;
-  padding-right: 10px;
+  padding-top: 50px;
+  padding-left: 600px;
 }
 
 .book_buttons {
@@ -102,6 +104,18 @@
   cursor: pointer;
   background-color: #eee;
 }
+
+.document_buttons{
+  text-align: right;
+  padding-top: 10px;
+  padding-right: 10px;
+}
+
+.document_show{
+  padding-bottom: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 </style>
 
 <script>
@@ -114,7 +128,7 @@ export default {
   mounted() {
     this.token = localStorage.getItem("token");
 
-    this.editor.config.height = 800;
+    this.editor.config.height = 600;
     this.editor.config.zIndex = 50;
     this.editor.config.uploadImgShowBase64 = true
     this.editor.create();
@@ -130,6 +144,8 @@ export default {
       currentTitleId:"",
       titleList:[],
       editor:new E('#content_editor'),
+      isEdit:false,
+      contentHtml:"",
     };
   },
   methods: {
@@ -152,6 +168,7 @@ export default {
         if (result.code == 0) {
           const document = result.data;
           this.editor.txt.html(document.text);
+          this.contentHtml = document.text;
         } else {
           ElMessage(result.error);
         }
@@ -202,19 +219,25 @@ export default {
       });
     },
     saveDocument(){
-      let documentText = this.editor.txt.html();
-      let document = {
-        noteBookId:this.currentBookId,
-        titleId:this.currentTitleId,
-        text: documentText
-      }
-      NetUtils.post(this, "/document/set?token=" + this.token, (result) => {
-        if (result.code == 0) {
-          ElMessage("保存成功");
-        } else {
-          ElMessage(result.error);
+      if(this.isEdit) {
+        let documentText = this.editor.txt.html();
+        let document = {
+          noteBookId: this.currentBookId,
+          titleId: this.currentTitleId,
+          text: documentText
         }
-      }, document);
+        NetUtils.post(this, "/document/set?token=" + this.token, (result) => {
+          if (result.code == 0) {
+            ElMessage("保存成功");
+            this.contentHtml = documentText;
+            this.isEdit = false;
+          } else {
+            ElMessage(result.error);
+          }
+        }, document);
+      }else{
+        this.isEdit = true;
+      }
     }
   }
 };
